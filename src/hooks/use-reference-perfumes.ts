@@ -105,7 +105,7 @@ export function usePerfumeWithNotes(perfumeId: string | null) {
         const { data: perfumeData, error: perfumeError } = await supabase
           .from("reference_perfumes")
           .select("*")
-          .eq("id", perfumeId)
+          .eq("id", perfumeId as string)
           .single()
 
         if (perfumeError) throw perfumeError
@@ -114,30 +114,31 @@ export function usePerfumeWithNotes(perfumeId: string | null) {
         const { data: notesData, error: notesError } = await supabase
           .from("reference_perfume_notes")
           .select("*")
-          .eq("perfume_id", perfumeId)
+          .eq("perfume_id", perfumeId as string)
           .order("sort_order", { ascending: true })
 
         if (notesError) throw notesError
 
         // Mapear perfume
+        const perfumeDataAny = perfumeData as any
         const mappedPerfume: ReferencePerfume = {
-          id: perfumeData.id,
-          name: perfumeData.name,
-          brand: perfumeData.brand,
-          yearLaunched: perfumeData.year_launched,
-          perfumer: perfumeData.perfumer,
-          gender: perfumeData.gender,
-          olfactiveFamily: perfumeData.olfactive_family,
-          olfactiveSubfamily: perfumeData.olfactive_subfamily,
-          concentrationType: perfumeData.concentration_type,
-          description: perfumeData.description,
-          imageUrl: perfumeData.image_url,
-          popularityScore: perfumeData.popularity_score,
-          isActive: perfumeData.is_active,
-          isSystem: perfumeData.is_system,
-          userId: perfumeData.user_id,
-          createdAt: perfumeData.created_at,
-          updatedAt: perfumeData.updated_at,
+          id: perfumeDataAny.id,
+          name: perfumeDataAny.name,
+          brand: perfumeDataAny.brand,
+          yearLaunched: perfumeDataAny.year_launched,
+          perfumer: perfumeDataAny.perfumer,
+          gender: perfumeDataAny.gender,
+          olfactiveFamily: perfumeDataAny.olfactive_family,
+          olfactiveSubfamily: perfumeDataAny.olfactive_subfamily,
+          concentrationType: perfumeDataAny.concentration_type,
+          description: perfumeDataAny.description,
+          imageUrl: perfumeDataAny.image_url,
+          popularityScore: perfumeDataAny.popularity_score,
+          isActive: perfumeDataAny.is_active,
+          isSystem: perfumeDataAny.is_system,
+          userId: perfumeDataAny.user_id,
+          createdAt: perfumeDataAny.created_at,
+          updatedAt: perfumeDataAny.updated_at,
         }
 
         // Mapear notas

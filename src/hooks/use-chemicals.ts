@@ -22,7 +22,7 @@ export function useChemicals() {
 
         if (error) throw error
 
-        const mappedChemicals: AromaticChemical[] = (data || []).map((item) => ({
+        const mappedChemicals: AromaticChemical[] = (data || []).map((item: any) => ({
           id: item.id,
           name: item.name,
           casNumber: item.cas_number,
