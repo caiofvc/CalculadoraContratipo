@@ -1,0 +1,32 @@
+# ============================================================================
+# COMANDOS GIT - COPIE E COLE NO TERMINAL
+# ============================================================================
+
+# 1. Inicializar Git (se necessário)
+git init
+
+# 2. Adicionar repositório remoto
+git remote add origin https://github.com/caiofvc/CalculadoraContratipo.git
+
+# 3. Adicionar todos os arquivos
+git add .
+
+# 4. Fazer commit inicial
+git commit -m "feat: Calculadora de Perfumes completa com biblioteca de referências"
+
+# 5. Renomear branch para main
+git branch -M main
+
+# 6. Push para GitHub
+git push -u origin main
+
+# ============================================================================
+# PRONTO! Seu código está no GitHub
+# ============================================================================
+
+# Próximo passo: Deploy na Vercel
+# 1. Acesse: https://vercel.com
+# 2. Login com GitHub
+# 3. Import Project > Selecione CalculadoraContratipo
+# 4. Adicione as variáveis de ambiente (.env.example)
+# 5. Deploy!
