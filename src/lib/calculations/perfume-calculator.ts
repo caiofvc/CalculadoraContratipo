@@ -1,5 +1,6 @@
 import { CalculationMode, CalculationResult, FormulaIngredient } from '@/types/perfume'
 import { ChemicalInFormula, OlfactiveNote, Coadjuvant } from '@/types/chemical'
+import { BaseConfig } from '@/types/base'
 
 const DROPS_PER_ML = 20
 
@@ -18,6 +19,7 @@ export interface SimpleCalculatorInput {
   glycerinDensity: number
   waterDensity: number
   coadjuvants?: Coadjuvant[] // Novo campo para coadjuvantes dinâmicos
+  baseConfig?: BaseConfig // Configuração de base pronta/própria
 }
 
 export interface AdvancedCalculatorInput {
@@ -34,6 +36,7 @@ export interface AdvancedCalculatorInput {
   glycerinDensity: number
   waterDensity: number
   coadjuvants?: Coadjuvant[] // Novo campo para coadjuvantes dinâmicos
+  baseConfig?: BaseConfig // Configuração de base pronta/própria
 }
 
 function calculateIngredient(
@@ -74,11 +77,11 @@ export function calculateSimpleFormula(input: SimpleCalculatorInput): Calculatio
 
   const ingredients: FormulaIngredient[] = []
 
-  // Essência/Óleo Aromático
+  // Essência/Óleo Essencial
   if (input.pctEssence > 0) {
     ingredients.push(
       calculateIngredient(
-        'Essência/Óleo Aromático',
+        'Essência/Óleo Essencial',
         input.pctEssence,
         input.totalVolume,
         input.essenceDensity,
@@ -87,11 +90,32 @@ export function calculateSimpleFormula(input: SimpleCalculatorInput): Calculatio
     )
   }
 
-  // Álcool de Cereais
+  // Base / Álcool
   if (input.pctAlcohol > 0) {
+    let baseName = `Álcool de Cereais ${input.alcoholGl}GL`
+    
+    // Se baseConfig estiver presente, usar nome apropriado
+    if (input.baseConfig) {
+      if (input.baseConfig.baseType === 'pronta') {
+        // Base Pronta - usar nome fornecido pelo usuário
+        baseName = input.baseConfig.baseName || 'Base Pronta'
+      } else {
+        // Base Própria - usar tipo de álcool
+        const alcoholTypes: Record<string, string> = {
+          cereais: 'Álcool de Cereais',
+          etilico: 'Álcool Etílico',
+          isopropilico: 'Álcool Isopropílico',
+          cana: 'Álcool de Cana',
+          outro: input.baseConfig.alcoholCustomName || 'Álcool'
+        }
+        const alcoholType = alcoholTypes[input.baseConfig.alcoholType || 'cereais']
+        baseName = `${alcoholType} ${input.baseConfig.alcoholPurity}GL`
+      }
+    }
+    
     ingredients.push(
       calculateIngredient(
-        `Álcool de Cereais ${input.alcoholGl}GL`,
+        baseName,
         input.pctAlcohol,
         input.totalVolume,
         input.alcoholDensity,
@@ -186,11 +210,32 @@ export function calculateAdvancedFormula(input: AdvancedCalculatorInput): Calcul
     }
   })
 
-  // Adicionar outros ingredientes
+  // Adicionar base / álcool
   if (input.pctAlcohol > 0) {
+    let baseName = `Álcool de Cereais ${input.alcoholGl}GL`
+    
+    // Se baseConfig estiver presente, usar nome apropriado
+    if (input.baseConfig) {
+      if (input.baseConfig.baseType === 'pronta') {
+        // Base Pronta - usar nome fornecido pelo usuário
+        baseName = input.baseConfig.baseName || 'Base Pronta'
+      } else {
+        // Base Própria - usar tipo de álcool
+        const alcoholTypes: Record<string, string> = {
+          cereais: 'Álcool de Cereais',
+          etilico: 'Álcool Etílico',
+          isopropilico: 'Álcool Isopropílico',
+          cana: 'Álcool de Cana',
+          outro: input.baseConfig.alcoholCustomName || 'Álcool'
+        }
+        const alcoholType = alcoholTypes[input.baseConfig.alcoholType || 'cereais']
+        baseName = `${alcoholType} ${input.baseConfig.alcoholPurity}GL`
+      }
+    }
+    
     ingredients.push(
       calculateIngredient(
-        `Álcool de Cereais ${input.alcoholGl}GL`,
+        baseName,
         input.pctAlcohol,
         input.totalVolume,
         input.alcoholDensity,

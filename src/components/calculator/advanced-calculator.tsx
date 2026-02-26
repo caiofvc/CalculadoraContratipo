@@ -10,8 +10,12 @@ import { Calculator, CheckCircle2, AlertCircle, Printer, Copy } from "lucide-rea
 import { PyramidBuilder } from "./pyramid-builder"
 import { PerfumeReferenceSelector } from "./perfume-reference-selector"
 import { CoadjuvantsManager } from "./coadjuvants-manager"
+import { BaseSelector } from "./base-selector"
+import { MacerationButton } from "./maceration-button"
+import { MacerationCard } from "./maceration-card"
 import { ChemicalInFormula, Coadjuvant } from "@/types/chemical"
 import { ReferencePerfumeWithNotes } from "@/types/reference-perfume"
+import { BaseConfig } from "@/types/base"
 import { calculateAdvancedFormula, formatBrazilianNumber, type AdvancedCalculatorInput } from "@/lib/calculations/perfume-calculator"
 import { ResultsTable } from "./results-table"
 import { StackBar } from "./stack-bar"
@@ -32,13 +36,24 @@ export function AdvancedCalculator() {
   const [coadjuvants, setCoadjuvants] = useState<Coadjuvant[]>([])
   const [pctWater, setPctWater] = useState(6)
   
-  // Densidades
-  const [alcoholGl, setAlcoholGl] = useState(96.2)
-  const [alcoholDensity, setAlcoholDensity] = useState(0.810)
+  // Base config (substitui alcoholGl e alcoholDensity)
+  const [baseConfig, setBaseConfig] = useState<BaseConfig>({
+    baseType: 'propria',
+    alcoholType: 'cereais',
+    alcoholPurity: 96.2,
+    alcoholDensity: 0.810,
+    baseDensity: 0.850,
+  })
   const [waterDensity, setWaterDensity] = useState(1.000)
   
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState("")
+  
+  // Estado de maceração
+  const [macerationRecipeId, setMacerationRecipeId] = useState<string | null>(null)
+  const [macerationStartDate, setMacerationStartDate] = useState<Date | null>(null)
+  const [macerationTargetDays, setMacerationTargetDays] = useState<number>(30)
+  const [macerationStatus, setMacerationStatus] = useState<string>("aguardando")
 
   // Calcular % total dos químicos
   const totalChemicalsPct = chemicals.reduce((sum, c) => sum + c.percentage, 0)
@@ -48,6 +63,13 @@ export function AdvancedCalculator() {
   
   // Calcular % de álcool automaticamente
   const alcoholPct = Math.max(0, 100 - totalChemicalsPct - totalCoadjuvantsPct - pctWater)
+
+  const handleMacerationStarted = (recipeId: string, startDate: Date, targetDays: number) => {
+    setMacerationRecipeId(recipeId)
+    setMacerationStartDate(startDate)
+    setMacerationTargetDays(targetDays)
+    setMacerationStatus("macerando")
+  }
 
   // Atualizar percentuais quando mudar o tipo de concentração
   const handleConcentrationChange = (value: string) => {
@@ -124,12 +146,13 @@ export function AdvancedCalculator() {
       pctPg: 0, // Removido - mantido para compatibilidade
       pctGlycerin: 0, // Removido - mantido para compatibilidade
       pctWater,
-      alcoholGl,
-      alcoholDensity,
+      alcoholGl: baseConfig.alcoholPurity,
+      alcoholDensity: baseConfig.baseType === 'pronta' ? baseConfig.baseDensity : baseConfig.alcoholDensity,
       pgDensity: 1.036, // Valor padrão para compatibilidade
       glycerinDensity: 1.261, // Valor padrão para compatibilidade
       waterDensity,
       coadjuvants, // Novo campo
+      baseConfig, // Adicionar baseConfig
     }
 
     const calculationResult = calculateAdvancedFormula(input)
@@ -300,50 +323,20 @@ export function AdvancedCalculator() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Álcool */}
-          <div className="p-4 rounded-lg border bg-muted/30">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span className="font-semibold">Álcool de Cereais</span>
-              </div>
-              <div className="text-2xl font-bold text-purple-400">
-                {formatBrazilianNumber(alcoholPct, 1)}%
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="alcoholGl">Pureza (GL)</Label>
-                <Input
-                  id="alcoholGl"
-                  type="number"
-                  value={alcoholGl}
-                  onChange={(e) => setAlcoholGl(Number(e.target.value))}
-                  min={0}
-                  max={100}
-                  step={0.1}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="alcoholDensity">Densidade (g/ml)</Label>
-                <Input
-                  id="alcoholDensity"
-                  type="number"
-                  value={alcoholDensity}
-                  onChange={(e) => setAlcoholDensity(Number(e.target.value))}
-                  min={0.5}
-                  max={1.5}
-                  step={0.001}
-                />
-              </div>
-            </div>
+          {/* Base / Veículo */}
+          <div className="mb-4">
+            <BaseSelector
+              config={baseConfig}
+              onChange={setBaseConfig}
+              remainingPercentage={alcoholPct}
+            />
           </div>
 
-          {/* Coadjuvantes / Aditivos */}
+          {/* Coadjuvantes / Químicos Aromáticos */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="font-semibold">Coadjuvantes / Aditivos</span>
+              <span className="font-semibold">Coadjuvantes / Químicos Aromáticos</span>
               <span className="text-sm text-muted-foreground ml-auto">
                 Total: {formatBrazilianNumber(totalCoadjuvantsPct, 1)}%
               </span>
@@ -489,9 +482,38 @@ export function AdvancedCalculator() {
                 <Copy className="mr-2 h-4 w-4" />
                 Copiar receita
               </Button>
+              {!macerationRecipeId && (
+                <MacerationButton
+                  recipeName={recipeName}
+                  recipeData={{
+                    concentrationType,
+                    totalVolume,
+                    calculationMode,
+                    pctEssence: totalChemicalsPct,
+                    pctAlcohol: alcoholPct,
+                    pctWater,
+                    alcoholGl: baseConfig.alcoholPurity,
+                    alcoholDensity: baseConfig.baseType === 'pronta' ? baseConfig.baseDensity : baseConfig.alcoholDensity,
+                    formulaType: "quimicos_aromaticos",
+                    ingredients: result.ingredients,
+                  }}
+                  onMacerationStarted={handleMacerationStarted}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Card de Maceração */}
+      {macerationRecipeId && macerationStartDate && (
+        <MacerationCard
+          recipeId={macerationRecipeId}
+          recipeName={recipeName || "Sem nome"}
+          startDate={macerationStartDate}
+          targetDays={macerationTargetDays}
+          status={macerationStatus}
+        />
       )}
     </div>
   )

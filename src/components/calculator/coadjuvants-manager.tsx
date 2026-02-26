@@ -1,25 +1,11 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import { Coadjuvant } from "@/types/chemical"
 import { COADJUVANT_SUGGESTIONS } from "@/lib/data/coadjuvants"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 
 interface CoadjuvantsManagerProps {
   coadjuvants: Coadjuvant[]
@@ -32,7 +18,6 @@ export function CoadjuvantsManager({
   onChange, 
   maxCoadjuvants = 4 
 }: CoadjuvantsManagerProps) {
-  const [openPopover, setOpenPopover] = useState<number | null>(null)
 
   const addCoadjuvant = () => {
     if (coadjuvants.length >= maxCoadjuvants) return
@@ -58,21 +43,20 @@ export function CoadjuvantsManager({
     onChange(updated)
   }
 
-  const selectSuggestion = (index: number, suggestion: typeof COADJUVANT_SUGGESTIONS[0]) => {
-    const updated = [...coadjuvants]
-    updated[index] = {
-      ...updated[index],
-      name: suggestion.name,
-      density: suggestion.density,
+  const handleNameChange = (index: number, value: string) => {
+    updateCoadjuvant(index, 'name', value)
+    
+    // Auto-preencher densidade se selecionar uma sugestão exata
+    const suggestion = COADJUVANT_SUGGESTIONS.find(s => s.name === value)
+    if (suggestion) {
+      updateCoadjuvant(index, 'density', suggestion.density)
     }
-    onChange(updated)
-    setOpenPopover(null)
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Coadjuvantes / Aditivos</h3>
+        <h3 className="text-sm font-semibold">Coadjuvantes / Químicos Aromáticos</h3>
         {coadjuvants.length < maxCoadjuvants && (
           <Button
             type="button"
@@ -97,51 +81,34 @@ export function CoadjuvantsManager({
               <div className="flex items-start gap-3">
                 <div className="flex-1 space-y-3">
                   <div className="space-y-2">
-                    <Label className="text-xs">Nome do Coadjuvante</Label>
-                    <Popover 
-                      open={openPopover === index} 
-                      onOpenChange={(open) => setOpenPopover(open ? index : null)}
-                    >
-                      <PopoverTrigger asChild>
-                        <div className="relative">
-                          <Input
-                            value={coadjuvant.name}
-                            onChange={(e) => updateCoadjuvant(index, 'name', e.target.value)}
-                            placeholder="Digite ou selecione..."
-                            onFocus={() => setOpenPopover(index)}
-                          />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar coadjuvante..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhum resultado. Digite um nome personalizado.</CommandEmpty>
-                            <CommandGroup heading="Sugestões">
-                              {COADJUVANT_SUGGESTIONS.map((suggestion) => (
-                                <CommandItem
-                                  key={suggestion.name}
-                                  onSelect={() => selectSuggestion(index, suggestion)}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{suggestion.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      Densidade: {suggestion.density} g/ml
-                                    </span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <Label htmlFor={`coadjuvant-name-${index}`} className="text-xs">
+                      Nome do Coadjuvante
+                    </Label>
+                    <Input
+                      id={`coadjuvant-name-${index}`}
+                      list={`coadjuvant-suggestions-${index}`}
+                      value={coadjuvant.name}
+                      onChange={(e) => handleNameChange(index, e.target.value)}
+                      onFocus={(e) => e.target.select()}
+                      placeholder="Digite ou selecione..."
+                      autoComplete="off"
+                    />
+                    <datalist id={`coadjuvant-suggestions-${index}`}>
+                      {COADJUVANT_SUGGESTIONS.map((suggestion) => (
+                        <option key={suggestion.name} value={suggestion.name}>
+                          {suggestion.name} — {suggestion.density} g/ml
+                        </option>
+                      ))}
+                    </datalist>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-xs">Porcentagem (%)</Label>
+                      <Label htmlFor={`coadjuvant-percentage-${index}`} className="text-xs">
+                        Porcentagem (%)
+                      </Label>
                       <Input
+                        id={`coadjuvant-percentage-${index}`}
                         type="number"
                         value={coadjuvant.percentage}
                         onChange={(e) => updateCoadjuvant(index, 'percentage', Number(e.target.value))}
@@ -151,8 +118,11 @@ export function CoadjuvantsManager({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Densidade (g/ml)</Label>
+                      <Label htmlFor={`coadjuvant-density-${index}`} className="text-xs">
+                        Densidade (g/ml)
+                      </Label>
                       <Input
+                        id={`coadjuvant-density-${index}`}
                         type="number"
                         value={coadjuvant.density}
                         onChange={(e) => updateCoadjuvant(index, 'density', Number(e.target.value))}
