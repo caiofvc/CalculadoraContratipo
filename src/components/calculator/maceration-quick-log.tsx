@@ -102,21 +102,21 @@ export function MacerationQuickLog({ recipeId, recipeName }: MacerationQuickLogP
       const supabase = createClient()
       
       // Atualizar status da receita
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from("recipes")
-        .update({ maceration_status: "pronto" } as any)
+        .update({ maceration_status: "pronto" })
         .eq("id", recipeId)
-
+      
       if (updateError) throw updateError
 
       // Registrar log
-      const { error: logError } = await supabase
+      const { error: logError } = await (supabase as any)
         .from("maceration_logs")
         .insert({
           recipe_id: recipeId,
           action: "marcou_pronto",
           notes: "Perfume marcado como pronto",
-        } as any)
+        })
 
       if (logError) throw logError
 
