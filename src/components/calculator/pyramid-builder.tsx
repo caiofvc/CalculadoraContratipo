@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, AlertTriangle } from "lucide-react"
 import { ChemicalSelector } from "./chemical-selector"
 import { AromaticChemical, ChemicalInFormula } from "@/types/chemical"
+import { handleNumericInput, parseNumericValue } from "@/lib/utils/number-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -140,13 +141,14 @@ export function PyramidBuilder({ onChemicalsChange, initialChemicals = [] }: Pyr
                 <div className="space-y-1">
                   <Label className="text-xs">Dosagem (%)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={item.percentage}
-                    onChange={(e) => updatePercentage(note, index, Number(e.target.value))}
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    className="h-8"
+                    onChange={(e) => {
+                      const cleaned = handleNumericInput(e.target.value)
+                      updatePercentage(note, index, parseNumericValue(cleaned))
+                    }}
+                    className="h-8 text-xs"
                   />
                 </div>
                 <div className="space-y-1">

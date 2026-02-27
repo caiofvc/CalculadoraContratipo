@@ -21,12 +21,13 @@ import { ResultsTable } from "./results-table"
 import { StackBar } from "./stack-bar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CONCENTRATION_TYPES } from "@/lib/data/default-chemicals"
+import { handleNumericInput, parseNumericValue } from "@/lib/utils/number-input"
 
 export function AdvancedCalculator() {
   const [showReferenceSelector, setShowReferenceSelector] = useState(true)
   const [recipeName, setRecipeName] = useState("")
   const [calculationMode, setCalculationMode] = useState<"volume" | "massa">("volume")
-  const [totalVolume, setTotalVolume] = useState(100)
+  const [totalVolume, setTotalVolume] = useState("100")
   const [concentrationType, setConcentrationType] = useState("edp")
   
   // Químicos da pirâmide
@@ -34,7 +35,7 @@ export function AdvancedCalculator() {
   
   // Coadjuvantes editáveis
   const [coadjuvants, setCoadjuvants] = useState<Coadjuvant[]>([])
-  const [pctWater, setPctWater] = useState(6)
+  const [pctWater, setPctWater] = useState("6")
   
   // Base config (substitui alcoholGl e alcoholDensity)
   const [baseConfig, setBaseConfig] = useState<BaseConfig>({
@@ -44,7 +45,7 @@ export function AdvancedCalculator() {
     alcoholDensity: 0.810,
     baseDensity: 0.850,
   })
-  const [waterDensity, setWaterDensity] = useState(1.000)
+  const [waterDensity, setWaterDensity] = useState("1.000")
   
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState("")
@@ -62,7 +63,7 @@ export function AdvancedCalculator() {
   const totalCoadjuvantsPct = coadjuvants.reduce((sum, c) => sum + c.percentage, 0)
   
   // Calcular % de álcool automaticamente
-  const alcoholPct = Math.max(0, 100 - totalChemicalsPct - totalCoadjuvantsPct - pctWater)
+  const alcoholPct = Math.max(0, 100 - totalChemicalsPct - totalCoadjuvantsPct - parseNumericValue(pctWater))
 
   const handleMacerationStarted = (recipeId: string, startDate: Date, targetDays: number) => {
     setMacerationRecipeId(recipeId)
@@ -122,7 +123,8 @@ export function AdvancedCalculator() {
   const handleCalculate = () => {
     setError("")
     
-    if (totalVolume <= 0) {
+    const totalVolumeNum = parseNumericValue(totalVolume)
+    if (totalVolumeNum <= 0) {
       setError("Informe uma quantidade total válida.")
       return
     }
@@ -132,25 +134,26 @@ export function AdvancedCalculator() {
       return
     }
 
-    const somaOutros = totalChemicalsPct + totalCoadjuvantsPct + pctWater
+    const pctWaterNum = parseNumericValue(pctWater)
+    const somaOutros = totalChemicalsPct + totalCoadjuvantsPct + pctWaterNum
     if (somaOutros > 100) {
       setError("A soma dos ingredientes ultrapassa 100%. Reduza as porcentagens.")
       return
     }
 
     const input: AdvancedCalculatorInput = {
-      totalVolume,
+      totalVolume: totalVolumeNum,
       calculationMode,
       chemicals,
       pctAlcohol: alcoholPct,
       pctPg: 0, // Removido - mantido para compatibilidade
       pctGlycerin: 0, // Removido - mantido para compatibilidade
-      pctWater,
+      pctWater: pctWaterNum,
       alcoholGl: baseConfig.alcoholPurity,
       alcoholDensity: baseConfig.baseType === 'pronta' ? baseConfig.baseDensity : baseConfig.alcoholDensity,
       pgDensity: 1.036, // Valor padrão para compatibilidade
       glycerinDensity: 1.261, // Valor padrão para compatibilidade
-      waterDensity,
+      waterDensity: parseNumericValue(waterDensity),
       coadjuvants, // Novo campo
       baseConfig, // Adicionar baseConfig
     }
@@ -253,11 +256,14 @@ export function AdvancedCalculator() {
               </Label>
               <Input
                 id="totalVolume"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={totalVolume}
-                onChange={(e) => setTotalVolume(Number(e.target.value))}
-                min={1}
-                step={1}
+                onChange={(e) => setTotalVolume(handleNumericInput(e.target.value))}
+                onBlur={() => {
+                  if (totalVolume === "" || totalVolume === ".") setTotalVolume("0")
+                }}
+                className="text-base"
               />
             </div>
 
@@ -358,22 +364,24 @@ export function AdvancedCalculator() {
               </div>
               <div className="space-y-2">
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={pctWater}
-                  onChange={(e) => setPctWater(Number(e.target.value))}
-                  min={0}
-                  max={100}
-                  step={0.5}
+                  onChange={(e) => setPctWater(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (pctWater === "" || pctWater === ".") setPctWater("0")
+                  }}
                   placeholder="%"
                 />
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={waterDensity}
-                  onChange={(e) => setWaterDensity(Number(e.target.value))}
-                  min={0.5}
-                  max={2}
-                  step={0.001}
-                  placeholder="Densidade"
+                  onChange={(e) => setWaterDensity(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (waterDensity === "" || waterDensity === ".") setWaterDensity("1")
+                  }}
+                  placeholder="g/ml"
                 />
               </div>
             </div>

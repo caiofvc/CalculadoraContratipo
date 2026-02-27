@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/use-auth'
+import { handleNumericInput, parseNumericValue } from '@/lib/utils/number-input'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -272,11 +273,10 @@ export default function SettingsPage() {
               <Label htmlFor="macerationDays">Meta de maceração padrão (dias)</Label>
               <Input
                 id="macerationDays"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={defaultMacerationDays}
-                onChange={(e) => setDefaultMacerationDays(parseInt(e.target.value) || 30)}
-                min={1}
-                max={365}
+                onChange={(e) => setDefaultMacerationDays(parseNumericValue(e.target.value) || 30)}
               />
             </div>
 
@@ -284,11 +284,10 @@ export default function SettingsPage() {
               <Label htmlFor="dropsPerMl">Unidade de gotas (gotas/ml)</Label>
               <Input
                 id="dropsPerMl"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={dropsPerMl}
-                onChange={(e) => setDropsPerMl(parseInt(e.target.value) || 20)}
-                min={10}
-                max={30}
+                onChange={(e) => setDropsPerMl(parseNumericValue(e.target.value) || 20)}
               />
             </div>
 

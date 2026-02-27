@@ -4,8 +4,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { createClient } from '@/lib/supabase/client'
+import { handleNumericInput, parseNumericValue } from '@/lib/utils/number-input'
 import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 import { Clock, Lock } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
@@ -196,11 +198,11 @@ export function MacerationButton({ recipeName, recipeData, onMacerationStarted }
               <Label htmlFor="target-days">Meta de maceração (dias):</Label>
               <Input
                 id="target-days"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={targetDays}
-                onChange={(e) => setTargetDays(Number(e.target.value))}
-                min={1}
-                max={730}
+                onChange={(e) => setTargetDays(parseNumericValue(e.target.value) || 30)}
+                className="w-full"
               />
             </div>
 

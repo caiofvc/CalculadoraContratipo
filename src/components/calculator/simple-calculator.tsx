@@ -17,6 +17,7 @@ import { Coadjuvant } from "@/types/chemical"
 import { BaseConfig } from "@/types/base"
 import { MacerationButton } from "./maceration-button"
 import { MacerationCard } from "./maceration-card"
+import { handleNumericInput, parseNumericValue } from "@/lib/utils/number-input"
 
 const COLORS = {
   essence: '#a78bfa',
@@ -29,16 +30,16 @@ const COLORS = {
 export function SimpleCalculator() {
   const [recipeName, setRecipeName] = useState("")
   const [calculationMode, setCalculationMode] = useState<"volume" | "massa">("volume")
-  const [totalVolume, setTotalVolume] = useState(100)
+  const [totalVolume, setTotalVolume] = useState("100")
   
   // Percentuais
-  const [pctEssence, setPctEssence] = useState(25)
+  const [pctEssence, setPctEssence] = useState("25")
   const [coadjuvants, setCoadjuvants] = useState<Coadjuvant[]>([])
-  const [pctWater, setPctWater] = useState(6)
+  const [pctWater, setPctWater] = useState("6")
   
   // Densidades
-  const [essenceDensity, setEssenceDensity] = useState(1.000)
-  const [waterDensity, setWaterDensity] = useState(1.000)
+  const [essenceDensity, setEssenceDensity] = useState("1.000")
+  const [waterDensity, setWaterDensity] = useState("1.000")
   
   // Base config (substitui alcoholGl e alcoholDensity)
   const [baseConfig, setBaseConfig] = useState<BaseConfig>({
@@ -62,7 +63,7 @@ export function SimpleCalculator() {
   const totalCoadjuvantsPct = coadjuvants.reduce((sum, c) => sum + c.percentage, 0)
 
   // Calcular % de álcool/base automaticamente
-  const alcoholPct = Math.max(0, 100 - pctEssence - totalCoadjuvantsPct - pctWater)
+  const alcoholPct = Math.max(0, 100 - parseNumericValue(pctEssence) - totalCoadjuvantsPct - parseNumericValue(pctWater))
 
   const handleMacerationStarted = (recipeId: string, startDate: Date, targetDays: number) => {
     setMacerationRecipeId(recipeId)
@@ -74,31 +75,34 @@ export function SimpleCalculator() {
   const handleCalculate = () => {
     setError("")
     
-    if (totalVolume <= 0) {
+    const totalVolumeNum = parseNumericValue(totalVolume)
+    if (totalVolumeNum <= 0) {
       setError("Informe uma quantidade total válida.")
       return
     }
 
-    const somaOutros = pctEssence + totalCoadjuvantsPct + pctWater
+    const pctEssenceNum = parseNumericValue(pctEssence)
+    const pctWaterNum = parseNumericValue(pctWater)
+    const somaOutros = pctEssenceNum + totalCoadjuvantsPct + pctWaterNum
     if (somaOutros > 100) {
       setError("A soma dos ingredientes ultrapassa 100%. Reduza as porcentagens.")
       return
     }
 
     const input: SimpleCalculatorInput = {
-      totalVolume,
+      totalVolume: totalVolumeNum,
       calculationMode,
-      pctEssence,
+      pctEssence: pctEssenceNum,
       pctAlcohol: alcoholPct,
       pctPg: 0, // Removido - mantido apenas para compatibilidade
       pctGlycerin: 0, // Removido - mantido apenas para compatibilidade
-      pctWater,
+      pctWater: pctWaterNum,
       alcoholGl: baseConfig.alcoholPurity,
       alcoholDensity: baseConfig.baseType === 'pronta' ? baseConfig.baseDensity : baseConfig.alcoholDensity,
-      essenceDensity,
+      essenceDensity: parseNumericValue(essenceDensity),
       pgDensity: 1.036, // Valor padrão para compatibilidade
       glycerinDensity: 1.261, // Valor padrão para compatibilidade
-      waterDensity,
+      waterDensity: parseNumericValue(waterDensity),
       coadjuvants, // Novo campo
       baseConfig, // Adicionar baseConfig
     }
@@ -188,11 +192,14 @@ export function SimpleCalculator() {
               </Label>
               <Input
                 id="totalVolume"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={totalVolume}
-                onChange={(e) => setTotalVolume(Number(e.target.value))}
-                min={1}
-                step={1}
+                onChange={(e) => setTotalVolume(handleNumericInput(e.target.value))}
+                onBlur={() => {
+                  if (totalVolume === "" || totalVolume === ".") setTotalVolume("0")
+                }}
+                className="text-base"
               />
             </div>
           </div>
@@ -219,24 +226,26 @@ export function SimpleCalculator() {
                 <Label htmlFor="pctEssence">Concentração (%)</Label>
                 <Input
                   id="pctEssence"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={pctEssence}
-                  onChange={(e) => setPctEssence(Number(e.target.value))}
-                  min={0}
-                  max={100}
-                  step={0.5}
+                  onChange={(e) => setPctEssence(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (pctEssence === "" || pctEssence === ".") setPctEssence("0")
+                  }}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="essenceDensity">Densidade (g/ml)</Label>
                 <Input
                   id="essenceDensity"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={essenceDensity}
-                  onChange={(e) => setEssenceDensity(Number(e.target.value))}
-                  min={0.5}
-                  max={2}
-                  step={0.001}
+                  onChange={(e) => setEssenceDensity(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (essenceDensity === "" || essenceDensity === ".") setEssenceDensity("1")
+                  }}
                 />
               </div>
               <div className="flex items-end">
@@ -291,24 +300,26 @@ export function SimpleCalculator() {
                 <Label htmlFor="pctWater">Porcentagem (%)</Label>
                 <Input
                   id="pctWater"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={pctWater}
-                  onChange={(e) => setPctWater(Number(e.target.value))}
-                  min={0}
-                  max={100}
-                  step={0.5}
+                  onChange={(e) => setPctWater(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (pctWater === "" || pctWater === ".") setPctWater("0")
+                  }}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="waterDensity">Densidade (g/ml)</Label>
                 <Input
                   id="waterDensity"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={waterDensity}
-                  onChange={(e) => setWaterDensity(Number(e.target.value))}
-                  min={0.5}
-                  max={2}
-                  step={0.001}
+                  onChange={(e) => setWaterDensity(handleNumericInput(e.target.value))}
+                  onBlur={() => {
+                    if (waterDensity === "" || waterDensity === ".") setWaterDensity("1")
+                  }}
                 />
               </div>
             </div>
@@ -343,7 +354,7 @@ export function SimpleCalculator() {
                 {recipeName || "Sem nome"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                Concentração: {formatBrazilianNumber(pctEssence, 1)}% · Álcool: {formatBrazilianNumber(alcoholPct, 1)}% · 
+                Concentração: {formatBrazilianNumber(parseNumericValue(pctEssence), 1)}% · Álcool: {formatBrazilianNumber(alcoholPct, 1)}% · 
                 Modo: {calculationMode === "volume" ? "Volume (ml)" : "Massa (g)"} · {new Date().toLocaleString("pt-BR")}
               </p>
             </div>

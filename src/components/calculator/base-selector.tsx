@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BaseType, AlcoholType, BaseConfig, ALCOHOL_TYPES } from "@/types/base"
 import { Info } from "lucide-react"
+import { handleNumericInput, parseNumericValue } from "@/lib/utils/number-input"
 
 interface BaseSelectorProps {
   config: BaseConfig
@@ -89,10 +90,9 @@ export function BaseSelector({ config, onChange, remainingPercentage }: BaseSele
                   <Label htmlFor="baseConcentration">Concentração da base (%)</Label>
                   <Input
                     id="baseConcentration"
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Ex: 80"
-                    min="0"
-                    max="100"
                     step="0.1"
                     value={config.baseConcentration || ''}
                     onChange={(e) => onChange({ ...config, baseConcentration: parseFloat(e.target.value) || undefined })}
@@ -102,10 +102,8 @@ export function BaseSelector({ config, onChange, remainingPercentage }: BaseSele
                   <Label htmlFor="baseDensity">Densidade (g/ml)</Label>
                   <Input
                     id="baseDensity"
-                    type="number"
-                    step="0.001"
-                    min="0.700"
-                    max="1.000"
+                    type="text"
+                    inputMode="decimal"
                     value={config.baseDensity}
                     onChange={(e) => onChange({ ...config, baseDensity: parseFloat(e.target.value) || 0.850 })}
                   />
@@ -168,10 +166,8 @@ export function BaseSelector({ config, onChange, remainingPercentage }: BaseSele
                   <Label htmlFor="alcoholPurity">Pureza (ºGL)</Label>
                   <Input
                     id="alcoholPurity"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
+                    type="text"
+                    inputMode="decimal"
                     value={config.alcoholPurity}
                     onChange={(e) => onChange({ ...config, alcoholPurity: parseFloat(e.target.value) || 96.2 })}
                   />
@@ -180,10 +176,8 @@ export function BaseSelector({ config, onChange, remainingPercentage }: BaseSele
                   <Label htmlFor="alcoholDensity">Densidade (g/ml)</Label>
                   <Input
                     id="alcoholDensity"
-                    type="number"
-                    step="0.001"
-                    min="0.700"
-                    max="1.000"
+                    type="text"
+                    inputMode="decimal"
                     value={config.alcoholDensity}
                     onChange={(e) => onChange({ ...config, alcoholDensity: parseFloat(e.target.value) || 0.810 })}
                   />

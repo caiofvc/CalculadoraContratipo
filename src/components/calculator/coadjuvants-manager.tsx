@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Plus, Trash2 } from "lucide-react"
 import { Coadjuvant } from "@/types/chemical"
 import { COADJUVANT_SUGGESTIONS } from "@/lib/data/coadjuvants"
+import { handleNumericInput, parseNumericValue } from "@/lib/utils/number-input"
 
 interface CoadjuvantsManagerProps {
   coadjuvants: Coadjuvant[]
@@ -109,12 +110,14 @@ export function CoadjuvantsManager({
                       </Label>
                       <Input
                         id={`coadjuvant-percentage-${index}`}
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={coadjuvant.percentage}
-                        onChange={(e) => updateCoadjuvant(index, 'percentage', Number(e.target.value))}
-                        min={0}
-                        max={100}
-                        step={0.1}
+                        onChange={(e) => {
+                          const cleaned = handleNumericInput(e.target.value)
+                          updateCoadjuvant(index, 'percentage', parseNumericValue(cleaned))
+                        }}
+                        placeholder="%"
                       />
                     </div>
                     <div className="space-y-2">
@@ -123,12 +126,14 @@ export function CoadjuvantsManager({
                       </Label>
                       <Input
                         id={`coadjuvant-density-${index}`}
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={coadjuvant.density}
-                        onChange={(e) => updateCoadjuvant(index, 'density', Number(e.target.value))}
-                        min={0.5}
-                        max={2}
-                        step={0.001}
+                        onChange={(e) => {
+                          const cleaned = handleNumericInput(e.target.value)
+                          updateCoadjuvant(index, 'density', parseNumericValue(cleaned))
+                        }}
+                        placeholder="g/ml"
                       />
                     </div>
                   </div>
