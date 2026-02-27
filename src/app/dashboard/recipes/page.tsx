@@ -1,215 +1,273 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAuth } from '@/hooks/use-auth'
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/client"
+import { Search, Plus, Trash2, Copy, Eye } from "lucide-react"
+
+interface Recipe {
+  id: string
+  name: string
+  concentration_type: string
+  total_volume: number
+  calculation_mode: string
+  maceration_status: string | null
+  maceration_start_date: string | null
+  maceration_target_days: number | null
+  created_at: string
+  notes: string | null
+}
 
 export default function RecipesPage() {
-  const { user } = useAuth()
-  const [recipes, setRecipes] = useState<any[]>([])
-  const [filteredRecipes, setFilteredRecipes] = useState<any[]>([])
+  const supabase = createClient()
+  const router = useRouter()
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('recent')
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const [filterStatus, setFilterStatus] = useState("todos")
+  const [filterType, setFilterType] = useState("todos")
 
   useEffect(() => {
-    if (!user) return
+    loadRecipes()
+  }, [])
 
-    const fetchRecipes = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('recipes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+  async function loadRecipes() {
+    try {
+      setLoading(true)
+      setError(null)
+      const { data, error: queryError } = await supabase
+        .from("recipes")
+        .select("*")
+        .order("created_at", { ascending: false })
 
-      if (!error && data) {
-        setRecipes(data)
-        setFilteredRecipes(data)
+      if (queryError) {
+        console.error("Erro ao carregar receitas:", queryError)
+        setError(queryError.message)
+        setRecipes([])
+      } else {
+        setRecipes(data || [])
       }
+    } catch (err) {
+      console.error("Erro inesperado:", err)
+      setError("Erro ao carregar receitas")
+      setRecipes([])
+    } finally {
       setLoading(false)
     }
+  }
 
-    fetchRecipes()
-  }, [user])
-
-  useEffect(() => {
-    let filtered = [...recipes]
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(r => 
-        r.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    // Filter by type
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(r => r.concentration_type === typeFilter)
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(r => r.maceration_status === statusFilter)
-    }
-
-    // Sort
-    if (sortBy === 'recent') {
-      filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    } else if (sortBy === 'oldest') {
-      filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    } else if (sortBy === 'name') {
-      filtered.sort((a, b) => a.name.localeCompare(b.name))
-    } else if (sortBy === 'rating') {
-      filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    }
-
-    setFilteredRecipes(filtered)
-  }, [recipes, searchTerm, typeFilter, statusFilter, sortBy])
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta receita?')) return
-
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('recipes')
-      .delete()
-      .eq('id', id)
-
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Tem certeza que deseja excluir "${name || 'Sem nome'}"? Esta ação não pode ser desfeita.`)) return
+    const { error } = await supabase.from("recipes").delete().eq("id", id)
     if (!error) {
       setRecipes(recipes.filter(r => r.id !== id))
     }
   }
 
-  const getStatusBadge = (status: string | null) => {
-    if (status === 'macerando') return <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300">🟡 Macerando</span>
-    if (status === 'pronto') return <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-300">🟢 Pronto</span>
-    return <span className="text-xs px-2 py-1 rounded-full bg-gray-500/20 text-gray-300">📦 Arquivado</span>
+  async function handleDuplicate(recipe: Recipe) {
+    const { data, error } = await (supabase as any)
+      .from("recipes")
+      .insert({
+        name: `${recipe.name || "Sem nome"} (cópia)`,
+        concentration_type: recipe.concentration_type,
+        total_volume: recipe.total_volume,
+        calculation_mode: recipe.calculation_mode,
+        notes: recipe.notes,
+      })
+      .select()
+      .single()
+
+    if (!error && data) {
+      loadRecipes()
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando receitas...</p>
-      </div>
-    )
+  // Filtros client-side
+  const filtered = recipes.filter(r => {
+    const matchSearch = !search || (r.name || "").toLowerCase().includes(search.toLowerCase())
+    const matchStatus = filterStatus === "todos" || r.maceration_status === filterStatus
+    const matchType = filterType === "todos" || r.concentration_type === filterType
+    return matchSearch && matchStatus && matchType
+  })
+
+  function getStatusBadge(status: string | null) {
+    switch (status) {
+      case "macerando": return { label: "Macerando", color: "bg-yellow-500/20 text-yellow-400" }
+      case "pronto": return { label: "Pronto", color: "bg-green-500/20 text-green-400" }
+      case "arquivado": return { label: "Arquivado", color: "bg-gray-500/20 text-gray-400" }
+      default: return { label: "Rascunho", color: "bg-purple-500/20 text-purple-400" }
+    }
+  }
+
+  function getMacerationProgress(recipe: Recipe) {
+    if (!recipe.maceration_start_date || !recipe.maceration_target_days) return null
+    const start = new Date(recipe.maceration_start_date)
+    const now = new Date()
+    const days = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const pct = Math.min((days / recipe.maceration_target_days) * 100, 100)
+    return { days, target: recipe.maceration_target_days, pct }
   }
 
   return (
-    <div className="min-h-screen">
-      <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">📋 Minhas Receitas</h1>
-          <Button asChild className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700">
-            <Link href="/">+ Nova receita</Link>
-          </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">📋 Minhas Receitas</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {recipes.length} receita{recipes.length !== 1 ? "s" : ""} salva{recipes.length !== 1 ? "s" : ""}
+          </p>
         </div>
+        <Link href="/"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-all active:scale-95">
+          <Plus size={16} /> Nova Receita
+        </Link>
+      </div>
 
-        {/* Filters */}
-        <div className="mb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="EDC">EDC</SelectItem>
-                <SelectItem value="EDT">EDT</SelectItem>
-                <SelectItem value="EDP">EDP</SelectItem>
-                <SelectItem value="Parfum">Parfum</SelectItem>
-                <SelectItem value="Extrait">Extrait</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="macerando">Macerando</SelectItem>
-                <SelectItem value="pronto">Pronto</SelectItem>
-                <SelectItem value="arquivado">Arquivado</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger>
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">Mais recentes</SelectItem>
-                <SelectItem value="oldest">Mais antigas</SelectItem>
-                <SelectItem value="name">Nome A-Z</SelectItem>
-                <SelectItem value="rating">Rating</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Input
-              placeholder="🔍 Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          />
         </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm cursor-pointer"
+        >
+          <option value="todos">Status: Todos</option>
+          <option value="macerando">🟡 Macerando</option>
+          <option value="pronto">🟢 Pronto</option>
+          <option value="arquivado">📦 Arquivado</option>
+        </select>
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm cursor-pointer"
+        >
+          <option value="todos">Tipo: Todos</option>
+          <option value="edc">EDC</option>
+          <option value="edt">EDT</option>
+          <option value="edp">EDP</option>
+          <option value="parfum">Parfum</option>
+          <option value="extrait">Extrait</option>
+        </select>
+      </div>
 
-        {/* Recipes List */}
-        {filteredRecipes.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <p className="text-muted-foreground">Nenhuma receita encontrada</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredRecipes.map((recipe) => (
-              <Card key={recipe.id} className="hover:border-purple-500/50 transition-colors">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{recipe.name}</h3>
-                        {getStatusBadge(recipe.maceration_status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>
-                          {recipe.concentration_type} · {recipe.total_volume}ml · {new Date(recipe.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                        {recipe.rating && (
-                          <p className="text-yellow-500">
-                            {'⭐'.repeat(recipe.rating)} {recipe.rating}/5
-                          </p>
-                        )}
-                      </div>
+      {/* Loading */}
+      {loading && (
+        <div className="text-center py-20 text-muted-foreground">
+          <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
+          Carregando receitas...
+        </div>
+      )}
+
+      {/* Erro */}
+      {error && !loading && (
+        <div className="text-center py-20">
+          <p className="text-red-400 mb-2">❌ Erro ao carregar receitas</p>
+          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <button onClick={loadRecipes}
+            className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm transition-all">
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && !error && filtered.length === 0 && (
+        <div className="text-center py-20 rounded-xl border border-white/10 bg-white/5">
+          <div className="text-5xl mb-4">🧪</div>
+          <h3 className="text-lg font-semibold mb-2">
+            {recipes.length === 0 ? "Nenhuma receita ainda" : "Nenhuma receita encontrada"}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6">
+            {recipes.length === 0
+              ? "Crie sua primeira fórmula na calculadora e salve para acompanhar!"
+              : "Tente ajustar os filtros de busca."}
+          </p>
+          {recipes.length === 0 && (
+            <Link href="/"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-all">
+              Ir para a Calculadora →
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Lista de receitas */}
+      {!loading && !error && filtered.length > 0 && (
+        <div className="space-y-3">
+          {filtered.map((recipe) => {
+            const badge = getStatusBadge(recipe.maceration_status)
+            const progress = getMacerationProgress(recipe)
+            return (
+              <div key={recipe.id}
+                className="rounded-xl border border-white/10 bg-white/5 p-4 hover:bg-white/[0.07] transition-colors">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-semibold truncate">{recipe.name || "Sem nome"}</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
+                        {badge.label}
+                      </span>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/dashboard/recipes/${recipe.id}`}>Ver</Link>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleDelete(recipe.id)}
-                        className="text-red-400 hover:text-red-300 hover:border-red-500/50"
-                      >
-                        Excluir
-                      </Button>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>{(recipe.concentration_type || "").toUpperCase()}</span>
+                      <span>{recipe.total_volume}ml</span>
+                      <span>{new Date(recipe.created_at).toLocaleDateString("pt-BR")}</span>
                     </div>
+
+                    {/* Barra de maceração */}
+                    {progress && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                          <span>Dia {progress.days} de {progress.target}</span>
+                          <span>{Math.round(progress.pct)}%</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              progress.pct >= 100 ? "bg-green-500" :
+                              progress.pct >= 50 ? "bg-orange-400" : "bg-yellow-400"
+                            }`}
+                            style={{ width: `${Math.min(progress.pct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
+
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link href={`/dashboard/recipes/${recipe.id}`}
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="Ver detalhes">
+                      <Eye size={16} />
+                    </Link>
+                    <button onClick={() => handleDuplicate(recipe)}
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors" title="Duplicar">
+                      <Copy size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(recipe.id, recipe.name)}
+                      className="p-2 rounded-lg hover:bg-red-500/20 text-red-400 transition-colors" title="Excluir">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
