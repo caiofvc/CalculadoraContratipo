@@ -2,8 +2,6 @@
 
 Sistema completo e profissional para cálculo de fórmulas de perfumaria com biblioteca de referências, pirâmide olfativa, coadjuvantes editáveis e muito mais.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/caiofvc/CalculadoraContratipo)
-
 ## ✨ Funcionalidades
 - Tabela de resultados com barra visual empilhada
 - Conversão automática ml ↔ g ↔ gotas
@@ -67,13 +65,13 @@ npm install
 O arquivo `.env.local` já está configurado com:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://haeeysbtgxhaqcqivlml.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=sua_chave_aqui
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_aqui
 ```
 
 ### 3. Execute as Migrations no Supabase
 
-1. Acesse o [Supabase Dashboard](https://supabase.com/dashboard/project/haeeysbtgxhaqcqivlml)
+1. Acesse o [Supabase Dashboard]
 2. Vá em **SQL Editor**
 3. Execute os arquivos na ordem:
    - `supabase/migrations/001_initial_schema.sql`
